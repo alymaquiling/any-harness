@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "any-harness"
+version = "0.1.0"
+description = "Author skills and agents once; generate native harness packages."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["PyYAML>=6.0.2,<7", "tomli-w>=1.1,<2"]
+
+[project.optional-dependencies]
+test = ["tomli>=2,<3"]
+
+[project.scripts]
+any-harness = "any_harness.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+any_harness = ["bundled/**/*"]

@@ -1,0 +1,33 @@
+name: Validate
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.9", "3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install -e '.[test]'
+      - run: python -m unittest discover -s tests -v
+      - run: any-harness validate examples/review-kit
+      - run: any-harness eval validate examples/review-kit
+      - run: any-harness eval preview examples/review-kit --harness codex
+      - run: any-harness validate src/any_harness/bundled/authoring
+      - run: any-harness build src/any_harness/bundled/authoring --out dist/authoring
+      - run: any-harness build src/any_harness/bundled/authoring --out dist/authoring --check
+      - name: Build wheel
+        run: |
+          mkdir -p "$RUNNER_TEMP/any-harness-wheel"
+          python -m pip wheel . --no-deps --wheel-dir "$RUNNER_TEMP/any-harness-wheel"
+      - name: Install wheel and run packaged smoke check
+        run: |
+          smoke_env="$RUNNER_TEMP/any-harness-smoke-${{ matrix.python }}"
+          python -m venv "$smoke_env"
+          "$smoke_env/bin/python" -m pip install --no-cache-dir "$RUNNER_TEMP/any-harness-wheel"/any_harness-*.whl
+          "$smoke_env/bin/python" -I scripts/check_distribution.py

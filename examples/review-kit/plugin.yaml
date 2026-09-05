@@ -1,0 +1,6 @@
+schema: 1
+name: review-kit
+version: 0.1.0
+description: Review changes and explain concrete findings
+author:
+  name: Any Harness contributors

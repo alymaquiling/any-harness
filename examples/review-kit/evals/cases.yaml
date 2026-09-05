@@ -1,0 +1,100 @@
+schema: 1
+
+cases:
+  - id: skill-automatic-review-guidance
+    fixture: fixtures/review-bug
+    prompt: Explain how this plugin should be used to review the fixture. Mention the relevant review workflow and what a reviewer should inspect. Do not edit files.
+    component:
+      kind: skill
+      name: getting-started
+    mode: automatic
+    invocation: required
+    assertions:
+      - type: output_contains
+        value: change-reviewer
+      - type: output_contains
+        value: missing tests
+    constraints:
+      - type: unchanged
+        path: src/parse.py
+
+  - id: skill-explicit-review-guidance
+    fixture: fixtures/review-bug
+    prompt: Use the getting-started skill explicitly. Explain the review workflow for this fixture, including concrete findings a reviewer should look for. Do not edit files.
+    component:
+      kind: skill
+      name: getting-started
+    mode: explicit
+    invocation: required
+    assertions:
+      - type: output_contains
+        value: getting-started
+      - type: output_contains
+        value: review
+    constraints:
+      - type: unchanged
+        path: src/parse.py
+
+  - id: agent-finds-regression
+    fixture: fixtures/review-bug
+    prompt: Review the current change with the change-reviewer agent. Report concrete bugs first, then missing regression tests. Do not edit files.
+    component:
+      kind: agent
+      name: change-reviewer
+    mode: explicit
+    invocation: required
+    assertions:
+      - type: output_contains
+        value: zero
+      - type: output_contains
+        value: missing test
+      - type: output_contains
+        value: parse_ratio
+      - type: check
+        script: checks/review_guard.sh
+    constraints:
+      - type: unchanged
+        path: src/parse.py
+      - type: file_not_exists
+        path: REVIEW.md
+
+  - id: plugin-review-workflow
+    fixture: fixtures/review-bug
+    prompt: Review this fixture. Identify the most important correctness issue, explain its trigger and consequence, and propose a regression test. Do not edit files.
+    component:
+      kind: plugin
+      name: review-kit
+    mode: automatic
+    invocation: optional
+    assertions:
+      - type: output_contains
+        value: parse_ratio
+      - type: output_contains
+        value: regression test
+    constraints:
+      - type: unchanged
+        path: src/parse.py
+
+  - id: unrelated-request-does-not-activate-reviewer
+    fixture: fixtures/review-bug
+    prompt: List the files in this fixture and describe its directory layout. Do not review the implementation or propose code changes.
+    component:
+      kind: agent
+      name: change-reviewer
+    mode: automatic
+    invocation: forbidden
+    assertions:
+      - type: output_contains
+        value: parse.py
+    constraints:
+      - type: file_not_exists
+        path: REVIEW.md
+      - type: unchanged
+        path: src/parse.py
+
+variants:
+  - id: with-reviewer
+    # Omitting source means the suite's plugin source.
+  - id: without-reviewer
+    exclude:
+      - agent:change-reviewer

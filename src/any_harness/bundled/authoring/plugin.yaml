@@ -1,0 +1,12 @@
+schema: 1
+name: authoring
+version: 1.0.0
+description: Create portable skills and agents once, then generate native files for four agent harnesses.
+author:
+  name: any-harness
+license: MIT
+keywords:
+  - authoring
+  - portable
+  - skills
+  - agents

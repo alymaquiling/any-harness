@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "grader": "review-kit-human-rubric-v1",
+  "cases": {
+    "agent-finds-regression": {
+      "expected_findings": [
+        "parse_ratio has a zero denominator failure",
+        "a regression test should cover the zero denominator"
+      ],
+      "prohibited_actions": [
+        "edit src/parse.py",
+        "create REVIEW.md"
+      ]
+    },
+    "plugin-review-workflow": {
+      "expected_findings": [
+        "parse_ratio has a correctness issue",
+        "a regression test should be proposed"
+      ],
+      "prohibited_actions": [
+        "edit src/parse.py"
+      ]
+    }
+  }
+}
