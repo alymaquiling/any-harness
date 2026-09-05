@@ -8,10 +8,34 @@ version = "0.1.0"
 description = "Author skills and agents once; generate native harness packages."
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["PyYAML>=6.0.2,<7", "tomli-w>=1.1,<2"]
+dependencies = ["PyYAML>=6.0.2,<7", "tomli-w>=1.1,<2", "typer>=0.17,<0.18"]
 
 [project.optional-dependencies]
 test = ["tomli>=2,<3"]
+
+[dependency-groups]
+dev = ["poethepoet>=0.32,<0.47", "tomli>=2,<3"]
+
+[tool.poe.executor]
+type = "simple"
+
+[tool.poe.tasks]
+test = { cmd = "python -m unittest discover -s tests -v", help = "Run the unit and integration suite" }
+check = { sequence = ["test", "example", "multi-example", "authoring-check"], help = "Run tests and validate/build the examples and bundled authoring plugin" }
+example = { sequence = [
+    { cmd = "any-harness build examples/review-kit --out dist/example" },
+    { cmd = "any-harness build examples/review-kit --out dist/example --check" },
+    { cmd = "any-harness eval validate examples/review-kit" },
+    { cmd = "any-harness eval preview examples/review-kit --harness codex" },
+], help = "Build and verify the example and preview its eval suite" }
+multi-example = { sequence = [
+    { cmd = "any-harness build-all examples/multi-plugin-repo --out dist/multi" },
+    { cmd = "any-harness build-all examples/multi-plugin-repo --out dist/multi --check" },
+], help = "Build and verify the combined multi-plugin example" }
+authoring-check = { sequence = [
+    { cmd = "any-harness build src/any_harness/bundled/authoring --out dist/authoring" },
+    { cmd = "any-harness build src/any_harness/bundled/authoring --out dist/authoring --check" },
+], help = "Build and verify the bundled authoring plugin" }
 
 [project.scripts]
 any-harness = "any_harness.cli:main"

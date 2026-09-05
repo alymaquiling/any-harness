@@ -1,0 +1,6 @@
+schema: 1
+name: repository-review
+version: 0.1.0
+description: Review a change and identify concrete risks before release.
+author:
+  name: Any Harness contributors

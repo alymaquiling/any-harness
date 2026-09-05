@@ -7,10 +7,12 @@ This page records what is checked for this checkout and what the checks can prov
 The unit and integration suite uses temporary local fixtures and does not need external network access (the HTTPS Git case uses a loopback-only server):
 
 ```sh
-.venv/bin/python -m unittest discover -s tests -v
+uv run poe check
 ```
 
-It covers source parsing, all four renderers, resource and executable-file preservation, build ownership, installer receipts, updates, uninstall, conflict handling, the five bundled authoring skills, and the local eval runner contract. The same suite is configured in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) for Python 3.9, 3.11, and 3.13.
+`uv run poe check` installs the development dependencies automatically, runs the test suite, then builds and checks the single-plugin example, the combined multi-plugin example, and the bundled authoring plugin, and validates/previews the example eval suite. Use `uv run poe test` for tests alone, `uv run poe multi-example` for the combined plugin fixture alone, or `uv run poe` to list tasks. The build tasks write owned output under `dist/example`, `dist/multi`, and `dist/authoring`.
+
+The test suite covers source parsing, all four renderers, resource and executable-file preservation, build ownership, installer receipts, updates, uninstall, conflict handling, the five bundled authoring skills, and the local eval runner contract. The same suite is configured in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) for Python 3.9, 3.11, and 3.13.
 
 The CI workflow is configured to build a wheel and install it into a fresh temporary virtual environment. `scripts/check_distribution.py` is a standard-library-only smoke check run with `python -I`; it verifies that `any_harness` does not resolve from the checkout's editable `src/any_harness` directory, that its import path matches installed distribution metadata, that the installed CLI places all five bundled authoring skills in a temporary project for each harness, and that the packaged eval CLI can validate and preview a temporary suite. The package's declared runtime dependencies are installed into that temporary environment; no global environment is changed.
 
@@ -26,12 +28,27 @@ python3 -m venv "$smoke_root/venv"
 
 The temporary directory can be removed after the command completes. Windows uses the corresponding `Scripts` paths.
 
+## Multi-plugin output checks
+
+To generate the multi-plugin fixture and compare the result without rewriting it, run these commands from the checkout:
+
+```sh
+uv run any-harness build-all examples/multi-plugin-repo --out dist/multi
+uv run any-harness build-all examples/multi-plugin-repo --out dist/multi --check
+```
+
+`--check` compares the complete generated file paths, bytes, executable modes, and directory set. Missing or extra files, changed file contents or executable modes, and missing or extra directories cause failure. It performs no output writes. Repeat any `--harness` or `--name` options from the original build; `build-all` ignores saved setup/config defaults.
+
+The output's `.any-harness-build-all.json` records build-all ownership. It is distinct from the single-plugin `.any-harness-build.json`, preventing a single-plugin build from overwriting the collection. Preserve that marker if you commit generated output. A rebuild requires owned output with the matching build kind and marketplace name and removes stale generated files and directories. Discovery validates unique plugin manifest names before writes, while identical skill basenames in different plugins stay in separate packages and `projects/<name>/` trees. See [multi-plugin distribution](distribution.md#multi-plugin-repositories) for discovery rules and the per-harness layout.
+
+These commands check generated artifacts, not native host loading or execution. The native harness limitations and evidence below still apply.
+
 ## Git distribution check
 
 The real HTTPS Git end-to-end check in `tests/test_git_e2e.py` serves a temporary bare repository over a loopback-only HTTPS server. It exercises ref resolution and the CLI's source-folder installation path without contacting a public Git host. The test requires `git`, `openssl`, and local socket access, and it is included by the default unittest discovery command:
 
 ```sh
-.venv/bin/python -m unittest discover -s tests -p 'test_git_e2e.py' -v
+uv run python -m unittest discover -s tests -p 'test_git_e2e.py' -v
 ```
 
 ## Native format and host evidence

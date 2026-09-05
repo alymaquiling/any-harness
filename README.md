@@ -2,23 +2,63 @@
 
 Write skills and agents once. Generate native files for **Claude Code, Codex, OpenCode, and Cursor**, or install them directly from a Git repository.
 
-A small Python CLI with two runtime dependencies: PyYAML and tomli-w. No Node, background service, LLM API key, or harness SDK. The generator runs without any harness installed.
+A small Python CLI. `uv run` installs the project's Python dependencies; they do not need global installation. No Node, background service, LLM API key, or harness SDK. The generator runs without any harness installed.
 
 ## Start here
 
-Requires Python 3.9+ (3.11+ recommended). In a checkout of this repository:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) once, then run this from a checkout to build the working example:
+
+```sh
+uv run poe example
+```
+
+`uv run` creates the environment, installs the project and development tools, and runs the command. No separate virtualenv creation, activation, or pip install is needed. Python 3.9+ is supported (3.11+ recommended); uv can download Python if needed. The committed `uv.lock` pins dependencies; use `uv run --locked ...` to require that lockfile to be up to date.
+
+To create and configure your own plugin:
+
+```sh
+uv run any-harness setup my-plugin --author "Your name"
+uv run any-harness add agent reviewer --source my-plugin --description "Review changes for bugs"
+uv run any-harness build
+```
+
+`setup` guides source creation and saves defaults in `.any-harness/config.yaml` under the current directory. It validates an existing plugin without changing its manifest. Setup does not build; the following `build` uses the saved source, harnesses, and output. Add `--no-input` to setup to use defaults without prompts. See [CLI workflows](docs/cli-workflows.md) for saved paths, explicit overrides, and config lookup.
+
+The explicit source workflow remains available with `uv run any-harness init my-plugin --author "Your name"` followed by `uv run any-harness build my-plugin`. `init` infers the name from the folder; use `--name` to override it. `build` validates the source before generating output, so a separate `validate` command is optional. Without saved defaults or flags, it generates all four harness outputs in `dist/`.
+
+To make the actual `any-harness` command available anywhere, run `uv tool install .` once. Subsequent examples assume this installation; when working in the checkout you can instead prefix commands with `uv run`.
+
+Check prerequisites without starting a vendor CLI:
+
+```sh
+uv run any-harness doctor
+uv run any-harness doctor --harness codex --json
+```
+
+Doctor requires Python 3.9 or newer and only inspects Python and `PATH`; it does not check vendor authentication or version compatibility. Git, uv, and unselected native CLIs are optional. An explicitly selected harness is required, so a missing selected CLI makes doctor exit 1. Doctor ignores saved config.
+
+Typer shell completion uses no-argument flags that auto-detect the current shell:
+
+```sh
+any-harness --show-completion
+any-harness --install-completion
+```
+
+`--show-completion` only prints the script; `--install-completion` edits the shell configuration. See [CLI workflows](docs/cli-workflows.md) for config lookup, explicit overrides, doctor details, and completion.
+
+<details>
+<summary>Alternative: use Python and pip without uv</summary>
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install -e .
-.venv/bin/any-harness init my-plugin --name my-plugin --author "Your name"
-.venv/bin/any-harness add agent reviewer --source my-plugin --description "Review changes for bugs"
-.venv/bin/any-harness validate my-plugin
-.venv/bin/any-harness build my-plugin --out dist
+.venv/bin/any-harness init my-plugin
+.venv/bin/any-harness build my-plugin
 ```
 
-On Windows use `.venv\Scripts\python.exe` and `.venv\Scripts\any-harness.exe`. Subsequent examples assume `any-harness` is on PATH, either by activating the environment or using `uv tool install .`. `uv` can manage Python for you; it is optional. This project has not been published to PyPI.
+On Windows use `.venv\Scripts\python.exe` and `.venv\Scripts\any-harness.exe`. Activate the environment to use `any-harness` directly. This project has not been published to PyPI.
+
+</details>
 
 Edit the generated starter instructions before sharing your plugin. See [the working example](examples/review-kit) and [source format](docs/source-format.md).
 
@@ -66,6 +106,34 @@ The generator removes `targets` and emits native frontmatter or TOML. It does **
 
 Set per-harness model and reasoning options in the same `targets.<harness>.settings` blocks. The [model settings reference](docs/model-settings.md) lists the current native fields and explains which controls apply to skills or agents.
 
+## Several plugins in one repository
+
+Keep related plugins together when they share maintainers or a release workflow. Each plugin retains its own manifest, instructions, and native settings:
+
+```text
+multi-plugin-repo/
+└── plugins/
+    ├── release-notes/
+    │   ├── plugin.yaml                 # name: release-notes
+    │   └── skills/getting-started/SKILL.md
+    └── repository-review/
+        ├── plugin.yaml                 # name: repository-review
+        └── skills/getting-started/SKILL.md
+```
+
+Build and check the [multi-plugin example](examples/multi-plugin-repo):
+
+```sh
+uv run any-harness build-all examples/multi-plugin-repo --out dist/multi
+uv run any-harness build-all examples/multi-plugin-repo --out dist/multi --check
+```
+
+`build-all [ROOT]` defaults to the current directory and `--out dist/all`. Repeat `--harness` to select targets; use `--name NAME` to override the marketplace name derived from the root folder. It ignores saved setup/config defaults.
+
+Discovery recursively finds `plugin.yaml`, including at `ROOT` itself, and stops descending at each plugin root. It skips hidden directories, `node_modules`, `vendor`, `build`, `dist`, `__pycache__`, the selected output subtree, and directories carrying `.any-harness-build.json` or `.any-harness-build-all.json`. It never follows symlinks. Plugins are ordered by manifest name; duplicate names fail before writes. Both example plugins can use `getting-started` because their packages and project trees are isolated by plugin name.
+
+Claude Code, Codex, and Cursor each receive one combined marketplace with packages at `plugins/<name>` and native project trees at `projects/<name>/...`. OpenCode receives only isolated native project trees. Build-all records ownership in `.any-harness-build-all.json`, distinct from the single-plugin `.any-harness-build.json`, so `build SOURCE` cannot overwrite a collection. It rejects unowned or mismatched output, removes stale generated files on rebuild, and compares paths, bytes, executable modes, and directories with `--check` without writing. See [multi-plugin distribution](docs/distribution.md#multi-plugin-repositories) for the output layout and release workflow.
+
 ## Install from Git
 
 After installing this CLI, end users run one command:
@@ -87,7 +155,7 @@ Repeat the install command with a new `--ref` to update. The receipt records the
 For a one-off CLI launch from this repository on GitHub:
 
 ```sh
-  uvx --from git+https://github.com/alymaquiling/any-harness.git any-harness install git+https://github.com/OWNER/PLUGIN.git --harness claude-code --global
+uvx --from git+https://github.com/alymaquiling/any-harness.git any-harness install git+https://github.com/OWNER/PLUGIN.git --harness claude-code --global
 ```
 
 The plugin URL above is a placeholder for the plugin you publish. This tool's
@@ -112,7 +180,7 @@ In a checkout of this tool, ask “Use add-client-harness to support NEW-HARNESS
 
 ## Generated output
 
-Each `dist/<harness>/` is independent:
+For a single-plugin `build SOURCE`, each `<out>/<harness>/` is independent (`--out` defaults to `dist` without saved config):
 
 - **Claude Code:** `.claude-plugin/marketplace.json`, a native plugin under `plugins/<name>`, and `.claude` project files under `project/`.
 - **Codex:** `.agents/plugins/marketplace.json`, a `.codex-plugin` skills package, and `.agents/skills` plus native `.codex/agents/*.toml` under `project/`. The documented plugin package does not install custom agents; use the direct installer for both.
@@ -123,6 +191,7 @@ Every output includes `INSTALL.md` and `compatibility.json`. Choose one installa
 
 ## Documentation and checks
 
+- [CLI workflows and saved defaults](docs/cli-workflows.md)
 - [Validation and current evidence](docs/validation.md)
 - [Source format and native escape hatches](docs/source-format.md)
 - [Model and reasoning settings](docs/model-settings.md)
@@ -131,13 +200,14 @@ Every output includes `INSTALL.md` and `compatibility.json`. Choose one installa
 - Research: [Claude Code](docs/research/claude-code.md), [Codex](docs/research/codex.md), [OpenCode](docs/research/opencode.md), [Cursor](docs/research/cursor.md)
 
 ```sh
-.venv/bin/python -m pip install -e '.[test]'
-.venv/bin/python -m unittest discover -s tests -v
-any-harness build examples/review-kit --out dist/example
-any-harness build examples/review-kit --out dist/example --check
-any-harness eval validate examples/review-kit
-any-harness eval preview examples/review-kit --harness codex
+uv run poe check          # Tests, both examples, and bundled plugin checks
+uv run poe test           # Only unit and integration tests
+uv run poe example        # Only single-plugin example generation/eval preview
+uv run poe multi-example  # Build and check the combined multi-plugin example
+uv run poe                # List available tasks
 ```
+
+[Poe the Poet](https://poethepoet.natn.io/) supplies cross-platform task shortcuts as a development dependency. End-user installs use the project's runtime dependencies; Poe is needed only for checkout tasks. CI runs the same `poe check` task and separately checks the packaged wheel.
 
 Tests exercise generation, YAML validation, preservation of resources, installation ownership, update/uninstall, and failure paths. See [validation and current evidence](docs/validation.md) for the packaged-wheel check, the HTTPS Git test, the local Codex manifest/discovery checks, and the native host behavior that remains unverified. Official-source research was checked September 5, 2026; native escape hatches are passed through, not validated against every vendor's evolving configuration schema.
 

@@ -1,0 +1,6 @@
+schema: 1
+name: release-notes
+version: 0.1.0
+description: Turn a set of changes into clear, useful release notes.
+author:
+  name: Any Harness contributors

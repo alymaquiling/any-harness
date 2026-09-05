@@ -38,6 +38,28 @@ class CLITest(unittest.TestCase):
             self.run_cli("install", self.source, "--harness", harness, "--project", project)
             self.run_cli("uninstall", "test-plugin", "--harness", harness, "--project", project)
 
+    def test_init_infers_name_and_build_validates(self):
+        self.run_cli("init", self.source)
+        self.assertIn("name: source", (self.source / "plugin.yaml").read_text())
+        self.run_cli("build", self.source, "--out", self.root / "output")
+
+    def test_init_infers_current_folder_name(self):
+        self.source.mkdir()
+        previous = Path.cwd()
+        try:
+            os.chdir(self.source)
+            self.run_cli("init", ".")
+        finally:
+            os.chdir(previous)
+        self.assertIn("name: source", (self.source / "plugin.yaml").read_text())
+
+    def test_invalid_inferred_name_does_not_create_destination(self):
+        destination = self.root / "Invalid Name"
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(main(["init", str(destination)]), 1)
+        self.assertFalse(destination.exists())
+        self.run_cli("init", destination, "--name", "valid-name")
+
     def test_bundled_authoring_installs_to_each_native_scope(self):
         for harness in ("claude-code", "codex", "cursor", "opencode"):
             project = self.root / harness
