@@ -1,5 +1,7 @@
 # Distribution and installation
 
+For a step-by-step rollout across a team, including migration from manual copies, repository context, MCP setup, and pinned updates, see [Share skills across a team](team-adoption.md).
+
 ## Lowest-maintenance Git workflow
 
 Keep `plugin.yaml`, `skills/`, `agents/`, and optional `native/` in Git. The direct installer fetches that source and generates files locally; you do not need to commit four generated trees. It clones into a temporary directory, resolves a ref to a commit, reads the selected source, generates only the requested harness, installs native files, and removes the temporary checkout. It does not initialize submodules or run plugin build scripts. Git and its configured authentication must be available for remote sources.

@@ -197,6 +197,7 @@ Every output includes `INSTALL.md` and `compatibility.json`. Choose one installa
 - [Model and reasoning settings](docs/model-settings.md)
 - [Native harness evaluations](docs/evals.md)
 - [Git distribution, installation, and maintenance](docs/distribution.md)
+- [Team adoption: shared workflows, repository context, and MCP setup](docs/team-adoption.md)
 - Research: [Claude Code](docs/research/claude-code.md), [Codex](docs/research/codex.md), [OpenCode](docs/research/opencode.md), [Cursor](docs/research/cursor.md)
 
 ```sh
